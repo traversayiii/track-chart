@@ -1,0 +1,1 @@
+gadget uses the letters px ahead of blog address for location information and builds a track map displayed as a gadget in primary blog.  Markers come from the primary blog itself.
