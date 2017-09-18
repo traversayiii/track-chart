@@ -255,8 +255,9 @@ If the user has a blog with the same url but with the letters px in front of the
                       // construct line and end marker if inpx and pxexists or both false
                      if (!pxexists) {
                       // construct line and end marker if inpx and pxexists or both false
-                      for (var i=2; i<paths; i++)
+                      // for (var i=0; i<paths; i++)
                       {
+                      var i=0;
                         pointsthispath = pathpoints[i];
                        SailPath = SailPaths[i];
                         if (pointsthispath>1) {
