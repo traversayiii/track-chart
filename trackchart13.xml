@@ -29,7 +29,8 @@ If the user has a blog with the same url but with the letters px in front of the
             // urls
            var blogurl =   self.document.referrer; // this blog
            var url =  blogurl.replace(/http:\/\//g ,""); 	// get rid of  preamble
-           var pxurl =  "http://px" + url.replace(/\/.+/,"");   // get rid of all after first slash
+           var modurl = url.replace(/www./g,"");	// get rid of www if included
+           var pxurl =  "http://px" + modurl.replace(/\/.+/,"");   // get rid of all after first slash
 
 
            var curzoom = 0;          // indicates not yet filled
@@ -48,16 +49,21 @@ If the user has a blog with the same url but with the letters px in front of the
                 var d = obj.text;
 
                  // Regular expression to fetch out position reports and zooms
-                  var exp = /(([0-8]\d)(&#176;|\s|°)([0-5]\d\.\d+)(&#39;|\s?|')(N|S)\s+([0-1]\d\d)(&#176;|\s|°)([0-5]\d\.\d+)(&#39;|\s?|')(E|W)|@(\-*\d+\.\d+),(\-*\d+\.\d+)&z=(\d+)|\_\_(\d+)\_\_|\.html'>(.+)<|class='date-header'><span>(.+)<\/span>)/gm; 
+                  var exp = /(([0-8]\d)(&#176;|\s|°)([0-5]\d\.\d+)(&#39;|'|\s)(N|S)\s+([0-1]\d\d)(&#176;|\s|°)([0-5]\d\.\d+)(&#39;|'|\s)(E|W)|@(\-*\d+\.\d+),(\-*\d+\.\d+)&z=(\d+)|\_\_(\d+)\_\_|\.html'>(.+)<|class='date-header'><span>(.+)<\/span>)/gm; 
                   var points = 0;        // counts route points
+                  var paths = 0;        // seperate paths
+                  var pointsthispath = 0;
+                  var pathpoints[];   // points in each path
+                  var SailPaths[];    // array of the paths
                   var  SailPath = [];      // points along route
+                  var PointList[];
                   var   Titles = [];        // post titles associated with points
                   var   Dates = [];       // dates associated with points
                   var currentTitle = "";
                   var currentDate = "";
+                  var prevlon = 0;
 	
                   // Loop over filling lines array with matching entries
-                  var prevlon = 0.0;
                  var match = exp.exec(d);
                  do {
                       if (match!=null) {
@@ -93,25 +99,35 @@ If the user has a blog with the same url but with the letters px in front of the
                                    latmin = parseFloat(match[4]);
                                    lonmin = parseFloat(match[9]);
                                    latdeg=hemilat * (latdeg + latmin/60);
-                                   londeg=hemilon * (londeg + lonmin/60);
-                                   if (points>1)
-                                   {
-                                      while((londeg-prevlon)>180) londeg -= 360;
-                                      while ((londeg-prevlon)<(-180)) londeg += 360;
-                                   }
-                                   prevlon = londeg;
+                                   londeg=hemilon * (londeg + lonmin/60);                                   
                               }
-                             var point = new google.maps.LatLng(latdeg,londeg,true);
-                             SailPath[points] = point;
+                              // see if crossed antimeridian and, if so, start a new path
+                              if (londeg-prevlon>180 || prevlon-londeg>180)
+                              {
+                                  SailPaths[paths] = SailPath;
+                                  pathpoints[paths] = pointsthispath;
+                                  pointsthispath = 0;
+                                  paths++;
+                              }
+                              prevlon = londeg;
+                             var point = new google.maps.LatLng(latdeg,londeg);
+                             SailPath[pointsthispath] = point;
+                             PointList[points] = point;
                               Titles[points] = currentTitle;
                               Dates[points] = currentDate;
                               points++;
+                              pointsthispath++;
                           }
                       }
                       match=exp.exec(d);
                   } while (match!=null);
 
                   map.setZoom(curzoom); 
+                  
+                  // save last path ...
+                  SailPaths[paths] = SailPath;
+                  pathpoints[paths] = pointsthispath;
+                 paths++;
 
                   // set up line, zoom level and map center
                   //center map on first point in file because it is the newest blog entry.
@@ -119,20 +135,25 @@ If the user has a blog with the same url but with the letters px in front of the
                       map.setCenter(SailPath[0], curzoom);       
 
                       // construct line and end marker if inpx and pxexists or both false
+                      for (var i=0; i<paths; i++)
+                      {
+                      points = pathpoints[i];
+                      SailPath = SailPaths[i];
                         if (points>1) {
                             pxexists = true;
                             var Route = new google.maps.Polyline({
                                 path: SailPath,
-                                strokeColor: "#00FF00",	// green line
+                                strokeColor: "#FF0000",
                                 strokeOpacity: 1.0,
                                 strokeWeight: 2
                              });
                              Route.setMap(map);
                           } 
-                         var bluePin = "http://www.google.com/intl/en_us/mapfiles/ms/micons/green-dot.png";
+                       }
+                         var bluePin = "http://www.google.com/intl/en_us/mapfiles/ms/micons/yellow-dot.png";
                          
-                         var marker = new google.maps.Marker({    // try to make this marker green
-                              position: SailPath[0],
+                         var marker = new google.maps.Marker({ // try to make this marker blue
+                              position: PointList[0],
                               map: map,
                               title: Dates[0],
                               icon: bluePin 
@@ -152,8 +173,13 @@ If the user has a blog with the same url but with the letters px in front of the
 
                  // Regular expression to fetch out position reports and zooms
                   var exp = /(([0-8]\d)(&#176;|\s|°)([0-5]\d\.\d+)(&#39;|'|\s)(N|S)\s+([0-1]\d\d)(&#176;|\s|°)([0-5]\d\.\d+)(&#39;|'|\s)(E|W)|@(\-*\d+\.\d+),(\-*\d+\.\d+)&z=(\d+)|\_\_(\d+)\_\_|\.html'>(.+)<|class='date-header'><span>(.+)<\/span>)/gm; 
-                  var points = 0;        // counts route points
+                 var points = 0;        // counts route points
+                  var paths = 0;        // seperate paths
+                  var pointsthispath = 0;
+                  var pathpoints[];   // points in each path
+                  var SailPaths[];    // array of the paths
                   var  SailPath = [];      // points along route
+                  var PointList[];
                   var   Titles = [];        // post titles associated with points
                   var   Dates = [];       // dates associated with points
                   var currentTitle = "";
@@ -197,18 +223,23 @@ If the user has a blog with the same url but with the letters px in front of the
                                    lonmin = parseFloat(match[9]);
                                    latdeg=hemilat * (latdeg + latmin/60);
                                    londeg=hemilon * (londeg + lonmin/60);                                   
-                                   if (points>1)
-                                   {
-                                      while((londeg-prevlon)>180) londeg -= 360;
-                                      while ((londeg-prevlon)<(-180)) londeg += 360;
-                                   }
-                                   prevlon = londeg;
                               }
-                             var point = new google.maps.LatLng(latdeg,londeg,true);
-                             SailPath[points] = point;
+                               // see if crossed antimeridian and, if so, start a new path
+                              if (londeg-prevlon>180 || prevlon-londeg>180)
+                              {
+                                  SailPaths[paths] = SailPath;
+                                  pathpoints[paths] = pointsthispath;
+                                  pointsthispath = 0;
+                                  paths++;
+                              }
+                              prevlon = londeg;
+                            var point = new google.maps.LatLng(latdeg,londeg);
+                             SailPath[pointsthispath] = point;
+                             PointList[points] = point;
                               Titles[points] = currentTitle;
                               Dates[points] = currentDate;
                               points++;
+                              pointsthispath++;
                           }
                       }
                       match=exp.exec(d);
@@ -223,19 +254,27 @@ If the user has a blog with the same url but with the letters px in front of the
 
                       // construct line and end marker if inpx and pxexists or both false
                      if (!pxexists) {
-                         var Route = new google.maps.Polyline({
-                              path: SailPath,
-                              strokeColor: "#FF0000",
-                              strokeOpacity: 1.0,
-                              strokeWeight: 2
-                           });
-                          Route.setMap(map);
-                      }
+                      // construct line and end marker if inpx and pxexists or both false
+                      for (var i=0; i<paths; i++)
+                      {
+                      pointsthispath = pathpoints[i];
+                      SailPath = SailPaths[i];
+                        if (pointsthispath>1) {
+                           var Route = new google.maps.Polyline({
+                                path: SailPath,
+                                strokeColor: "#FF0000",
+                                strokeOpacity: 1.0,
+                                strokeWeight: 2
+                             });
+                             Route.setMap(map);
+                          } 
+                       }
+                     }
 	
                      for (var i=0; i<points; i++) {
                            var label =  Titles[i] + "\n" + Dates[i];
                            var marker = new google.maps.Marker({
-                              position: SailPath[i],
+                              position: PointList[i],
                               map: map,
                               title: label
                            })
