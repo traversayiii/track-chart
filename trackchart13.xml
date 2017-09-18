@@ -1,0 +1,270 @@
+﻿<?xml version="1.0" encoding="UTF-8" ?> 
+<Module>
+    <ModulePrefs title="Map Display"  height="300"
+         author="Laurence Roberts" 
+         description="Display a google map showing blogger post locations and a track line. Also displays lat-longs in the blog posts if they are in the form 45 12.34'N 006 56.78'W.
+If the user has a blog with the same url but with the letters px in front of the url, takes the track line from posts in that blog. Zoom is the most recent __6__ in a blog post. Use example at traversayiii.blogspot.com"
+         author_email="lroberts.feedback+track-chart@gmail.com"
+         screenshot="http://track-chart.googlecode.com/files/screenshot.PNG"
+         thumbnail="http://track-chart.googlecode.com/files/thumbnail.PNG"> 
+      <Require feature="google.blog"/>
+    </ModulePrefs>
+    <Content type="html"> 
+    <![CDATA[ 
+        <div id="map_canvas" style="width:100%; height:100%"></div> 
+
+        <script type="text/javascript"
+            src="http://maps.googleapis.com/maps/api/js?sensor=false">
+        </script>
+ 
+        <script type="text/javascript">
+            // Get userprefs
+            var prefs = new gadgets.Prefs();
+
+            // debug flag. When its value is non-zero, debugging messages are displayed      
+            var debug = 0;
+            // The string containing debugging messages
+            var debug_html = "";
+
+            // urls
+           var blogurl =   self.document.referrer; // this blog
+           var url =  blogurl.replace(/http:\/\//g ,""); 	// get rid of  preamble
+           var pxurl =  "http://px" + url.replace(/\/.+/,"");   // get rid of all after first slash
+
+
+           var curzoom = 0;          // indicates not yet filled
+           var pxexists = false;      // ancillary blog
+
+           function initialize() {	// function starts here to give map global scope
+
+            function pxresponse(obj) {
+               // fetch other file as we are in px file
+                gadgets.io.makeRequest(blogurl, response, params);                   
+
+                if (obj.errors.length>0) return;
+
+                // obj.text contains the feed data
+
+                var d = obj.text;
+
+                 // Regular expression to fetch out position reports and zooms
+                  var exp = /(([0-8]\d)(&#176;|\s|°)([0-5]\d\.\d+)(&#39;|\s?|')(N|S)\s+([0-1]\d\d)(&#176;|\s|°)([0-5]\d\.\d+)(&#39;|\s?|')(E|W)|@(\-*\d+\.\d+),(\-*\d+\.\d+)&z=(\d+)|\_\_(\d+)\_\_|\.html'>(.+)<|class='date-header'><span>(.+)<\/span>)/gm; 
+                  var points = 0;        // counts route points
+                  var  SailPath = [];      // points along route
+                  var   Titles = [];        // post titles associated with points
+                  var   Dates = [];       // dates associated with points
+                  var currentTitle = "";
+                  var currentDate = "";
+	
+                  // Loop over filling lines array with matching entries
+                  var prevlon = 0.0;
+                 var match = exp.exec(d);
+                 do {
+                      if (match!=null) {
+                          // 2: lat deg 4: lat min 6: lat hemis 7: long deg 9: long min 11: long hemis
+                          // 12 lat 13: long  14: zoom 15: zoom 16: title  17: date
+                          // parse here ...
+                          var hemilat=-1;
+                          var hemilon=-1;
+                          var latdeg = 0.0;
+                          var londeg = 0.0;
+                          var latmin = 0.0;
+                          var lonmin = 0.0;
+
+                          if (match[15] && curzoom==0) curzoom = parseInt(match[15]);
+                          else if (match[16]) currentTitle = match[16];
+                          else if (match[17]) currentDate = match[17];
+                          else
+                          {
+                              if (match[14] && match[13] && match[12])
+                              {
+                                   // if (curzoom == 0) curzoom = parseInt(match[14]); // don't use these zooms
+                                   latdeg = parseFloat(match[12]);
+                                   londeg = parseFloat(match[13]);
+                              }
+                             else
+                              {
+                                   if(match[6]=='n') hemilat=1;
+                                   if(match[6]=='N') hemilat=1;
+                                   if(match[11]=='e') hemilon=1;
+                                   if(match[11]=='E') hemilon=1;
+                                   latdeg = parseFloat(match[2]);
+                                   londeg = parseFloat(match[7]);
+                                   latmin = parseFloat(match[4]);
+                                   lonmin = parseFloat(match[9]);
+                                   latdeg=hemilat * (latdeg + latmin/60);
+                                   londeg=hemilon * (londeg + lonmin/60);
+                                   if (points>1)
+                                   {
+                                      while((londeg-prevlon)>180) londeg -= 360;
+                                      while ((londeg-prevlon)<(-180)) londeg += 360;
+                                   }
+                                   prevlon = londeg;
+                              }
+                             var point = new google.maps.LatLng(latdeg,londeg,true);
+                             SailPath[points] = point;
+                              Titles[points] = currentTitle;
+                              Dates[points] = currentDate;
+                              points++;
+                          }
+                      }
+                      match=exp.exec(d);
+                  } while (match!=null);
+
+                  map.setZoom(curzoom); 
+
+                  // set up line, zoom level and map center
+                  //center map on first point in file because it is the newest blog entry.
+                  if(points>0) {
+                      map.setCenter(SailPath[0], curzoom);       
+
+                      // construct line and end marker if inpx and pxexists or both false
+                        if (points>1) {
+                            pxexists = true;
+                            var Route = new google.maps.Polyline({
+                                path: SailPath,
+                                strokeColor: "#00FF00",	// green line
+                                strokeOpacity: 1.0,
+                                strokeWeight: 2
+                             });
+                             Route.setMap(map);
+                          } 
+                         var bluePin = "http://www.google.com/intl/en_us/mapfiles/ms/micons/green-dot.png";
+                         
+                         var marker = new google.maps.Marker({    // try to make this marker green
+                              position: SailPath[0],
+                              map: map,
+                              title: Dates[0],
+                              icon: bluePin 
+                           })
+
+
+                   }
+            }
+
+
+            function response(obj) { 
+                if (obj.errors.length>0)  return;
+
+               // obj.text contains the feed data
+
+                var d = obj.text;
+
+                 // Regular expression to fetch out position reports and zooms
+                  var exp = /(([0-8]\d)(&#176;|\s|°)([0-5]\d\.\d+)(&#39;|'|\s)(N|S)\s+([0-1]\d\d)(&#176;|\s|°)([0-5]\d\.\d+)(&#39;|'|\s)(E|W)|@(\-*\d+\.\d+),(\-*\d+\.\d+)&z=(\d+)|\_\_(\d+)\_\_|\.html'>(.+)<|class='date-header'><span>(.+)<\/span>)/gm; 
+                  var points = 0;        // counts route points
+                  var  SailPath = [];      // points along route
+                  var   Titles = [];        // post titles associated with points
+                  var   Dates = [];       // dates associated with points
+                  var currentTitle = "";
+                  var currentDate = "";
+                  var prevlon = 0;
+	
+                  // Loop over filling lines array with matching entries
+                 var match = exp.exec(d);
+                 do {
+                      if (match!=null) {
+                          // 2: lat deg 4: lat min 6: lat hemis 7: long deg 9: long min 11: long hemis
+                          // 12 lat 13: long  14: zoom 15: zoom 16: title  17: date
+                          // parse here ...
+                          var hemilat=-1;
+                          var hemilon=-1;
+                          var latdeg = 0.0;
+                          var londeg = 0.0;
+                          var latmin = 0.0;
+                          var lonmin = 0.0;
+
+                          if (match[15] && curzoom==0)  curzoom = parseInt(match[15]);
+                          else if (match[16])  currentTitle = match[16];
+                          else if (match[17])  currentDate = match[17];
+                          else
+                          {
+                              if (match[14] && match[13] && match[12])
+                              {
+                                   // if (curzoom == 0) curzoom = parseInt(match[14]); don't use these zooms
+                                   latdeg = parseFloat(match[12]);
+                                   londeg = parseFloat(match[13]);
+                              }
+                             else
+                              {
+                                   if(match[6]=='n') hemilat=1;
+                                   if(match[6]=='N') hemilat=1;
+                                   if(match[11]=='e') hemilon=1;
+                                   if(match[11]=='E') hemilon=1;
+                                   latdeg = parseFloat(match[2]);
+                                   londeg = parseFloat(match[7]);
+                                   latmin = parseFloat(match[4]);
+                                   lonmin = parseFloat(match[9]);
+                                   latdeg=hemilat * (latdeg + latmin/60);
+                                   londeg=hemilon * (londeg + lonmin/60);                                   
+                                   if (points>1)
+                                   {
+                                      while((londeg-prevlon)>180) londeg -= 360;
+                                      while ((londeg-prevlon)<(-180)) londeg += 360;
+                                   }
+                                   prevlon = londeg;
+                              }
+                             var point = new google.maps.LatLng(latdeg,londeg,true);
+                             SailPath[points] = point;
+                              Titles[points] = currentTitle;
+                              Dates[points] = currentDate;
+                              points++;
+                          }
+                      }
+                      match=exp.exec(d);
+                  } while (match!=null);
+
+                  map.setZoom(curzoom); 
+
+                  // set up line, zoom level and map center
+                  //center map on first point in file because it is the newest blog entry.
+                  if(points>0) {
+                      map.setCenter(SailPath[0], curzoom);       
+
+                      // construct line and end marker if inpx and pxexists or both false
+                     if (!pxexists) {
+                         var Route = new google.maps.Polyline({
+                              path: SailPath,
+                              strokeColor: "#FF0000",
+                              strokeOpacity: 1.0,
+                              strokeWeight: 2
+                           });
+                          Route.setMap(map);
+                      }
+	
+                     for (var i=0; i<points; i++) {
+                           var label =  Titles[i] + "\n" + Dates[i];
+                           var marker = new google.maps.Marker({
+                              position: SailPath[i],
+                              map: map,
+                              title: label
+                           })
+                     }
+                  }
+            }
+
+
+               var mapOptions = {  center: new google.maps.LatLng(43.67, -79.6),
+                   zoom: curzoom,    mapTypeId: google.maps.MapTypeId.HYBRID,
+                   scrollwheel: false,
+                    controls: {
+                        panControl: true,
+                        zoomControl: true,
+                        mapTypeControl: true,
+                        scaleControl: true,
+                        streetViewControl: false,
+                        overviewMapControl: true
+                         } };
+               var map = new google.maps.Map(document.getElementById("map_canvas"), mapOptions);
+               var params = {};  
+               params[gadgets.io.RequestParameters.CONTENT_TYPE] = gadgets.io.ContentType.TEXT; 
+
+               gadgets.io.makeRequest(pxurl, pxresponse, params);
+            }
+      
+            gadgets.util.registerOnLoadHandler(initialize);
+
+        </script>
+    ]]> 
+    </Content>
+</Module>
