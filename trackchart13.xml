@@ -132,7 +132,7 @@ If the user has a blog with the same url but with the letters px in front of the
                   // set up line, zoom level and map center
                   //center map on first point in file because it is the newest blog entry.
                   if(points>0) {
-                      map.setCenter(SailPath[0], curzoom);       
+                      map.setCenter(PointList[0], curzoom);       
 
                       // construct line and end marker if inpx and pxexists or both false
                       for (var i=0; i<paths; i++)
@@ -250,7 +250,7 @@ If the user has a blog with the same url but with the letters px in front of the
                   // set up line, zoom level and map center
                   //center map on first point in file because it is the newest blog entry.
                   if(points>0) {
-                      map.setCenter(SailPath[0], curzoom);       
+                      map.setCenter(PointList[0], curzoom);       
 
                       // construct line and end marker if inpx and pxexists or both false
                      if (!pxexists) {
@@ -262,7 +262,7 @@ If the user has a blog with the same url but with the letters px in front of the
                         if (pointsthispath>1) {
                            var Route = new google.maps.Polyline({
                                 path: SailPath,
-                                strokeColor: "#FF0000",
+                                strokeColor: "#FFFF00",
                                 strokeOpacity: 1.0,
                                 strokeWeight: 2
                              });
