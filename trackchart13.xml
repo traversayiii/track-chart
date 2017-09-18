@@ -53,10 +53,10 @@ If the user has a blog with the same url but with the letters px in front of the
                   var points = 0;        // counts route points
                   var paths = 0;        // seperate paths
                   var pointsthispath = 0;
-                  var pathpoints[];   // points in each path
-                  var SailPaths[];    // array of the paths
+                  var pathpoints = [];   // points in each path
+                  var SailPaths = [];    // array of the paths
                   var  SailPath = [];      // points along route
-                  var PointList[];
+                  var PointList = [];
                   var   Titles = [];        // post titles associated with points
                   var   Dates = [];       // dates associated with points
                   var currentTitle = "";
@@ -137,9 +137,9 @@ If the user has a blog with the same url but with the letters px in front of the
                       // construct line and end marker if inpx and pxexists or both false
                       for (var i=0; i<paths; i++)
                       {
-                      points = pathpoints[i];
+                      pointsthispath = pathpoints[i];
                       SailPath = SailPaths[i];
-                        if (points>1) {
+                        if (pointsthispath>1) {
                             pxexists = true;
                             var Route = new google.maps.Polyline({
                                 path: SailPath,
@@ -176,10 +176,10 @@ If the user has a blog with the same url but with the letters px in front of the
                  var points = 0;        // counts route points
                   var paths = 0;        // seperate paths
                   var pointsthispath = 0;
-                  var pathpoints[];   // points in each path
-                  var SailPaths[];    // array of the paths
+                  var pathpoints = [];   // points in each path
+                  var SailPaths = [];    // array of the paths
                   var  SailPath = [];      // points along route
-                  var PointList[];
+                  var PointList = [];
                   var   Titles = [];        // post titles associated with points
                   var   Dates = [];       // dates associated with points
                   var currentTitle = "";
@@ -257,8 +257,8 @@ If the user has a blog with the same url but with the letters px in front of the
                       // construct line and end marker if inpx and pxexists or both false
                       for (var i=0; i<paths; i++)
                       {
-                      pointsthispath = pathpoints[i];
-                      SailPath = SailPaths[i];
+                        pointsthispath = pathpoints[i];
+                       SailPath = SailPaths[i];
                         if (pointsthispath>1) {
                            var Route = new google.maps.Polyline({
                                 path: SailPath,
