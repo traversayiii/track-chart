@@ -105,6 +105,7 @@ If the user has a blog with the same url but with the letters px in front of the
                               if (londeg-prevlon>180 || prevlon-londeg>180)
                               {
                                   SailPaths[paths] = SailPath;
+                                  SailPath = [];
                                   pathpoints[paths] = pointsthispath;
                                   pointsthispath = 0;
                                   paths++;
@@ -228,6 +229,7 @@ If the user has a blog with the same url but with the letters px in front of the
                               if (londeg-prevlon>180 || prevlon-londeg>180)
                               {
                                   SailPaths[paths] = SailPath;
+                                  SailPath = [];
                                   pathpoints[paths] = pointsthispath;
                                   pointsthispath = 0;
                                   paths++;
@@ -246,6 +248,11 @@ If the user has a blog with the same url but with the letters px in front of the
                   } while (match!=null);
 
                   map.setZoom(curzoom); 
+ 
+                  // save last path ...
+                  SailPaths[paths] = SailPath;
+                  pathpoints[paths] = pointsthispath;
+                 paths++;
 
                   // set up line, zoom level and map center
                   //center map on first point in file because it is the newest blog entry.
